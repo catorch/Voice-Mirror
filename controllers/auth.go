@@ -16,7 +16,7 @@ import (
 var validate = validator.New()
 
 func Signup(c *fiber.Ctx) error {
-	db := c.Locals("db").(*mongo.Database) // Assuming you've set the DB in the context
+	db := c.Locals("db").(*mongo.Database)
 	usersCollection := db.Collection("users")
 
 	var data struct {
@@ -54,4 +54,43 @@ func Signup(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "OK", "message": "Account successfully created!"})
+}
+
+func Login(c *fiber.Ctx) error {
+	db := c.Locals("db").(*mongo.Database) // Assuming you've set the DB in the context
+	usersCollection := db.Collection("users")
+
+	var data struct {
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required"`
+	}
+
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "ERROR", "message": "Cannot parse JSON"})
+	}
+
+	if err := validate.Struct(data); err != nil {
+		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"status": "ERROR", "message": err.Error()})
+	}
+
+	var user models.User
+	err := usersCollection.FindOne(c.Context(), bson.M{"email": data.Email}).Decode(&user)
+	if err != nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"status": "ERROR", "message": "User not found"})
+	}
+
+	if !user.ValidPassword(data.Password) {
+		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"status": "ERROR", "message": "Invalid password"})
+	}
+
+	if user.Status != "ACTIVE" {
+		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"status": "ERROR", "message": "Account is not active"})
+	}
+
+	token, err := user.GenerateJWT()
+	if err != nil {
+		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"status": "ERROR", "message": "An error occurred. Please try again!"})
+	}
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "OK", "token": token, "message": "Login successful!"})
 }
