@@ -5,15 +5,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
+	"voice_mirror/config"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"voice_mirror/models"
 )
-
-var validate = validator.New()
 
 func Signup(c *fiber.Ctx) error {
 	db := c.Locals("db").(*mongo.Database)
@@ -29,7 +28,7 @@ func Signup(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "ERROR", "message": "Cannot parse JSON"})
 	}
 
-	if err := validate.Struct(data); err != nil {
+	if err := config.Validator.Struct(data); err != nil {
 		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"status": "ERROR", "message": err.Error()})
 	}
 
@@ -57,7 +56,7 @@ func Signup(c *fiber.Ctx) error {
 }
 
 func Login(c *fiber.Ctx) error {
-	db := c.Locals("db").(*mongo.Database) // Assuming you've set the DB in the context
+	db := c.Locals("db").(*mongo.Database)
 	usersCollection := db.Collection("users")
 
 	var data struct {
@@ -69,7 +68,7 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "ERROR", "message": "Cannot parse JSON"})
 	}
 
-	if err := validate.Struct(data); err != nil {
+	if err := config.Validator.Struct(data); err != nil {
 		return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"status": "ERROR", "message": err.Error()})
 	}
 

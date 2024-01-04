@@ -42,6 +42,9 @@ func main() {
 	// Setup public routes
 	routes.SetupPublicRoutes(app)
 
+	// Setup private routes
+	routes.SetupPrivateRoutes(app)
+
 	// Start the server
 	app.Listen(":3000")
 }
